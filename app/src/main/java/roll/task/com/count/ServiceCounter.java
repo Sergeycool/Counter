@@ -16,6 +16,7 @@ public class ServiceCounter extends Service {
     private int mValue;
     private InfinityAdder mInfinityAdder = new InfinityAdder();
     private boolean mFlag = true;
+    private String mLastTime = "first run";
 
     public ServiceCounter() {
     }
@@ -28,46 +29,52 @@ public class ServiceCounter extends Service {
 
     public int onStartCommand(Intent intent, int flags, int startId) {
 
-        mSharedPref = PreferenceManager.getDefaultSharedPreferences(getApplication());
-        SharedPreferences.Editor editor = mSharedPref.edit();
-
-        //todo in new method code below
-        Date date = new Date();
-        DateFormat dateFormat = new SimpleDateFormat("HH:mm:ss");
-        String formattedDate= dateFormat.format(date);
-
-
-        editor.putString("last_time", formattedDate);
-        editor.apply();
+        mValue = intent.getIntExtra(MainActivity.PARAM_COUNT, 0);
+        mLastTime = intent.getStringExtra((MainActivity.PARAM_TIME));
+        writeNewTime();
 
         mInfinityAdder.start();
 
-
         return super.onStartCommand(intent, flags, startId);
+    }
+
+    public void writeNewTime() {
+
+        mSharedPref = PreferenceManager.getDefaultSharedPreferences(getApplication());
+        SharedPreferences.Editor editor = mSharedPref.edit();
+        Date date = new Date();
+        DateFormat dateFormat = new SimpleDateFormat("HH:mm:ss");
+        mLastTime = dateFormat.format(date);
+        editor.putString("last_time", mLastTime);
+        editor.apply();
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
 
-        mFlag = false;
+        mFlag = false; //stop Thread
         mInfinityAdder.interrupt();
         SharedPreferences.Editor editor = mSharedPref.edit();
         editor.putInt("value", mValue);
         editor.apply();
+
+        //update time
+        Intent intentTime = new Intent(MainActivity.BROADCAST_ACTION);
+        intentTime.putExtra(MainActivity.PARAM_TIME, mLastTime);
+        sendBroadcast(intentTime);
     }
 
     private class InfinityAdder extends Thread {
-
 
         @Override
         public void run() {
             super.run();
 
+//            mSharedPref = PreferenceManager.getDefaultSharedPreferences(getApplication());
+//            mValue = mSharedPref.getInt("value", mValue);
 
-            mSharedPref = PreferenceManager.getDefaultSharedPreferences(getApplication());
-            mValue = mSharedPref.getInt("value", mValue);
-
+            Intent intent = new Intent(MainActivity.BROADCAST_ACTION);
 
             while (mFlag) {
 
@@ -79,6 +86,8 @@ public class ServiceCounter extends Service {
                     e.printStackTrace();
                 }
 
+                intent.putExtra(MainActivity.PARAM_COUNT, mValue);
+                sendBroadcast(intent);
 
             }
         }
