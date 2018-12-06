@@ -48,6 +48,12 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    @Override
+    protected void onStop() {
+        super.onStop();
+        stopService(new Intent(this, ServiceCounter.class));
+    }
+
     public void initialBroadcastReceiver() {
 
         mBroadcast = new BroadcastReceiver() {
